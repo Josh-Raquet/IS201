@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flappy Bird Clone</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #87CEEB;
+      font-family: sans-serif;
+      text-align: center;
+      user-select: none;
+    }
+    canvas {
+      display: block;
+      margin: 20px auto;
+      background: #87CEEB;
+      border: 2px solid #000;
+    }
+    #startBtn {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    #linkContainer {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+    }
+    #linkContainer a {
+      font-size: 18px;
+      color: #000;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    #linkContainer a:hover {
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Link to Professional-Review page -->
+  <div id="linkContainer">
+    <a href="index.html">Professional-Review</a>
+  </div>
+
+  <h1>Flappy Bird Clone</h1>
+  <canvas id="gameCanvas" width="600" height="700"></canvas>
+  <button id="startBtn">Start Game</button>
+
+  <script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    const startBtn = document.getElementById("startBtn");
+
+    let bird, pipes, gravity, gameInterval, score, highScore = 0, gameStarted = false;
+    const groundHeight = 80;
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+
+    function init() {
+      bird = {
+        x: 100,
+        y: canvasHeight / 2,
+        radius: 18,
+        velocity: 0,
+        jump: -6.5 // Softer flap
+      };
+      gravity = 0.5;
+      pipes = [];
+      score = 0;
+      addPipe();
+    }
+
+    function resetGame() {
+      init();
+      gameStarted = true;
+      clearInterval(gameInterval);
+      gameInterval = setInterval(gameLoop, 1000 / 60);
+    }
+
+    function addPipe() {
+      const gap = 150;
+      const topHeight = Math.floor(Math.random() * 250) + 50;
+      pipes.push({
+        x: canvasWidth,
+        width: 70,
+        top: topHeight,
+        bottom: canvasHeight - topHeight - gap - groundHeight
+      });
+    }
+
+    function gameLoop() {
+      bird.velocity += gravity;
+      bird.y += bird.velocity;
+
+      for (let pipe of pipes) {
+        pipe.x -= 2;
+
+        if (!pipe.passed && pipe.x + pipe.width < bird.x) {
+          pipe.passed = true;
+          score++;
+          if (score > highScore) highScore = score;
+        }
+
+        if (
+          bird.x + bird.radius > pipe.x &&
+          bird.x - bird.radius < pipe.x + pipe.width &&
+          (bird.y - bird.radius < pipe.top || bird.y + bird.radius > canvasHeight - pipe.bottom - groundHeight)
+        ) {
+          endGame();
+        }
+      }
+
+      if (bird.y + bird.radius > canvasHeight - groundHeight || bird.y < 0) {
+        endGame();
+      }
+
+      if (pipes[pipes.length - 1].x < canvasWidth - 220) {
+        addPipe();
+      }
+
+      drawScene();
+    }
+
+    function endGame() {
+      clearInterval(gameInterval);
+      gameStarted = false;
+      drawScene();
+      ctx.fillStyle = "rgba(0,0,0,0.5)";
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      ctx.fillStyle = "#fff";
+      ctx.font = "36px sans-serif";
+      ctx.fillText("Game Over", canvasWidth / 2 - 90, canvasHeight / 2 - 20);
+      ctx.font = "24px sans-serif";
+      ctx.fillText("Click 'Start Game' or press Space", canvasWidth / 2 - 160, canvasHeight / 2 + 20);
+    }
+
+    function drawScene() {
+      ctx.fillStyle = "#87CEEB";
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+      ctx.fillStyle = "#228B22";
+      ctx.strokeStyle = "#145214";
+      for (let pipe of pipes) {
+        ctx.beginPath();
+        ctx.roundRect(pipe.x, 0, pipe.width, pipe.top, 12);
+        ctx.fill();
+        ctx.stroke();
+        const bottomY = canvasHeight - pipe.bottom - groundHeight;
+        ctx.beginPath();
+        ctx.roundRect(pipe.x, bottomY, pipe.width, pipe.bottom, 12);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "#228B22";
+      ctx.fillRect(0, canvasHeight - groundHeight, canvasWidth, groundHeight);
+
+      ctx.fillStyle = "yellow";
+      ctx.beginPath();
+      ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(bird.x + 6, bird.y - 5, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "orange";
+      ctx.beginPath();
+      ctx.moveTo(bird.x + bird.radius, bird.y);
+      ctx.lineTo(bird.x + bird.radius + 7, bird.y - 5);
+      ctx.lineTo(bird.x + bird.radius + 7, bird.y + 5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "20px sans-serif";
+      ctx.fillText(`Score: ${score}`, 20, 30);
+      ctx.fillText(`High: ${highScore}`, 20, 55);
+
+      if (!gameStarted) {
+        ctx.fillStyle = "rgba(0,0,0,0.4)";
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.fillStyle = "#fff";
+        ctx.font = "30px sans-serif";
+        ctx.fillText("Press Space or Click Start", canvasWidth / 2 - 170, canvasHeight / 2);
+        ctx.font = "20px sans-serif";
+        ctx.fillText("Flap to avoid the pipes!", canvasWidth / 2 - 120, canvasHeight / 2 + 40);
+      }
+    }
+
+    function flap() {
+      if (!gameStarted) {
+        resetGame();
+      }
+      bird.velocity = bird.jump;
+    }
+
+    CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+      this.beginPath();
+      this.moveTo(x + r, y);
+      this.lineTo(x + w - r, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + r);
+      this.lineTo(x + w, y + h - r);
+      this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      this.lineTo(x + r, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - r);
+      this.lineTo(x, y + r);
+      this.quadraticCurveTo(x, y, x + r, y);
+      this.closePath();
+    }
+
+    // Prevent scrolling when pressing space
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        flap();
+      }
+    });
+
+    startBtn.addEventListener("click", resetGame);
+
+    init();
+    drawScene();
+  </script>
+</body>
+</html>
